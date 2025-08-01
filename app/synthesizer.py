@@ -2,6 +2,7 @@ import sys
 import json
 import os
 from typing import List, Dict, Any
+from datetime import datetime
 
 # Use ChatOllama for Ollama integration
 from langchain_community.chat_models import ChatOllama
@@ -25,8 +26,6 @@ def generate_data_with_llm(schema: Dict[str, Any], num_records: int) -> List[Dic
     that conforms to a given JSON schema.
     """
     # 1. Initialize the Ollama Language Model
-    # It connects to the specified endpoint. Make sure to specify the model
-    # you want to use (e.g., 'llama3', 'mistral', etc.).
     llm = ChatOllama(
         base_url="https://inference.ccrolabs.com",
         model="llama3", # Replace with your desired Ollama model
@@ -35,20 +34,31 @@ def generate_data_with_llm(schema: Dict[str, Any], num_records: int) -> List[Dic
     )
 
     # 2. Create a JSON Output Parser
-    # This parser will automatically try to fix any malformed JSON from the LLM.
     parser = JsonOutputParser(pydantic_object=GeneratedData)
 
     # 3. Construct a detailed prompt for the LLM
     prompt_template = """
-    You are an expert synthetic data generator. Your task is to generate a list of {num_records} realistic data records that strictly adhere to the following JSON schema.
-    The data should be diverse and contextually relevant based on the field names and descriptions.
-    Your output MUST be a valid JSON object that follows the provided format instructions.
+    You are a world-class data fabrication engine. Your purpose is to generate highly realistic, diverse, and structured synthetic data.
 
-    JSON Schema:
+    **Task:**
+    Generate exactly {num_records} distinct data records that strictly conform to the provided JSON schema.
+
+    **Contextual Information for Realism:**
+    - Current Date: {current_date}
+    - Location Context: Cluj-Napoca, Romania (generate data that would be plausible for this region where applicable, e.g., names, addresses).
+
+    **Instructions:**
+    1.  **Strict Schema Adherence:** Every field in every generated record must match the type and format specified in the schema. Pay close attention to the descriptions for contextual clues.
+    2.  **Data Diversity:** Ensure the generated records are unique and cover a wide range of plausible values. Avoid simple repetitions. For example, if generating user data, create different names, ages, and emails for each record.
+    3.  **Realism:** The generated data should look like real-world information. Use the contextual information provided to enhance realism.
+    4.  **JSON Output Only:** Your entire output must be a single, valid JSON object that matches the format instructions below. Do not include any introductory text, explanations, apologies, or markdown formatting like ```json.
+
+    **JSON Schema to follow:**
     ```json
     {schema}
     ```
 
+    **Required Output Format:**
     {format_instructions}
     """
     
@@ -58,14 +68,18 @@ def generate_data_with_llm(schema: Dict[str, Any], num_records: int) -> List[Dic
     )
 
     # 4. Create the LangChain chain
-    # This chain pipes the prompt to the LLM and then parses the output.
     chain = prompt | llm | parser
 
     # 5. Invoke the chain to generate data
     print("Generating data with Ollama... This may take a moment.", file=sys.stderr)
+    
+    # Get current date for the prompt
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
     result = chain.invoke({
         "num_records": num_records,
-        "schema": json.dumps(schema, indent=2)
+        "schema": json.dumps(schema, indent=2),
+        "current_date": current_date
     })
     
     return result.get('records', [])
@@ -80,7 +94,6 @@ if __name__ == "__main__":
         num_records = int(sys.argv[2])
         
         # --- CORE LOGIC ---
-        # This is the main call to the LLM-based data generation function.
         final_data = generate_data_with_llm(input_schema, num_records)
         
         # Print the final JSON data to standard output

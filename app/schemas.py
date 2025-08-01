@@ -12,15 +12,12 @@ class OrmConfig(BaseModel):
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-
-class UserCreate(UserBase):
-    pass
-
+class UserCreate(UserBase): pass
 class User(UserBase, OrmConfig):
     id: UUID
     created_at: datetime
 
-# --- Schema Field Schemas (for inside Schema.fields) ---
+# --- Schema Field Schemas ---
 class SchemaField(BaseModel):
     id: str
     name: str
@@ -34,13 +31,8 @@ class SchemaBase(BaseModel):
     description: Optional[str] = None
     version: Optional[str] = None
     fields: List[SchemaField]
-
-class SchemaCreate(SchemaBase):
-    pass
-
-class SchemaUpdate(SchemaBase):
-    pass
-
+class SchemaCreate(SchemaBase): pass
+class SchemaUpdate(SchemaBase): pass
 class Schema(SchemaBase, OrmConfig):
     id: UUID
     created_by: Optional[UUID] = None
@@ -52,37 +44,49 @@ class DatabaseConnectionBase(BaseModel):
     name: str
     type: str
     status: str = "Disconnected"
-    details: str # In a real app, this would be handled more securely
-
-class DatabaseConnectionCreate(DatabaseConnectionBase):
-    pass
-
+    details: str
+class DatabaseConnectionCreate(DatabaseConnectionBase): pass
 class DatabaseConnection(DatabaseConnectionBase, OrmConfig):
     id: UUID
     created_by: Optional[UUID] = None
     created_at: datetime
 
-# --- Job Schemas (with nested settings) ---
+# --- Query Schemas ---
+class QueryRequest(BaseModel):
+    query: str
+class QueryResponse(BaseModel):
+    results: List[Dict[str, Any]]
+
+# --- Job Mapping Schemas ---
+class JobMappingBase(BaseModel):
+    job_id: UUID
+    table_name: str
+    field_mappings: Dict[str, str] = Field(description="Maps schema field name to table column name")
+class JobMappingCreate(JobMappingBase): pass
+class JobMappingUpdate(BaseModel):
+    field_mappings: Dict[str, str]
+class JobMapping(JobMappingBase, OrmConfig):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+# --- Job Schemas ---
 class SimulationRules(BaseModel):
     eventType: str
     generationFrequency: int
     variabilitySettings: Optional[str] = None
-
 class OutputSettings(BaseModel):
     outputFormat: str
     kafkaTopic: str
     metadataTags: List[str]
-
 class JobBase(BaseModel):
     name: str
     status: str = "Draft"
     simulation_rules: Optional[SimulationRules] = None
     output_settings: Optional[OutputSettings] = None
-
 class JobCreate(JobBase):
     schema_id: UUID
     destination_id: Optional[UUID] = None
-
 class Job(JobBase, OrmConfig):
     id: UUID
     schema_id: UUID
@@ -90,7 +94,8 @@ class Job(JobBase, OrmConfig):
     created_by: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
-    schema_definition: Optional[Schema] = None # Nested schema for detailed responses
+    schema_definition: Optional[Schema] = None
+    mappings: List[JobMapping] = []
 
 # --- Job Run Schemas ---
 class JobRunBase(BaseModel):
@@ -98,10 +103,8 @@ class JobRunBase(BaseModel):
     records_generated: int = 0
     avg_latency_ms: Optional[int] = None
     error_message: Optional[str] = None
-
 class JobRunCreate(JobRunBase):
     job_id: UUID
-
 class JobRun(JobRunBase, OrmConfig):
     id: UUID
     job_id: UUID
@@ -115,10 +118,9 @@ class DataGenerationResponse(BaseModel):
     records_generated: int
     sample_data: List[Dict[str, Any]]
 
-# --- Schemas with full relationships for detailed API responses ---
+# --- Schemas with full relationships ---
 class JobWithRuns(Job):
     runs: List[JobRun] = []
-
 class UserWithDetails(User):
     schemas: List[Schema] = []
     connections: List[DatabaseConnection] = []
