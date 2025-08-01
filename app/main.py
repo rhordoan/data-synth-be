@@ -19,6 +19,7 @@ app = FastAPI(
 origins = [
     "http://localhost",
     "http://localhost:3000",  # Default port for Next.js development
+    "https://data-synth.ccrolabs.com/"
     # Add your production frontend URL here when you deploy
     # "https://your-frontend-domain.com",
 ]
